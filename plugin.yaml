@@ -1,0 +1,21 @@
+name: signal-notify
+version: 1.0.0
+description: "Signal texts when a Hermes turn pauses, fails or is interrupted, and when Hermes waits on a question, approval or sudo prompt. Sends through your own signal-cli HTTP daemon."
+author: Drew Brosnan
+kind: standalone
+manifest_version: 2
+api_version: 1
+requires_hermes: ">=0.21.5"
+license: MIT
+homepage: https://github.com/dbrosnan/hermes-signal-notify
+tags: [notifications, signal, approvals, automation]
+requires_env:
+  - SIGNAL_HTTP_URL
+  - SIGNAL_ACCOUNT
+  - SIGNAL_HOME_CHANNEL
+config_schema:
+  recipient: {type: str, default: "", label: "Recipient", description: "Signal number (+15551234567) or UUID to text instead of SIGNAL_HOME_CHANNEL."}
+  notify_on: {type: list, default: [paused, failed, interrupted, question], label: "Notify on", description: "Any of paused, failed, interrupted, question."}
+  skip_platforms: {type: list, default: [signal, cron, subagent], label: "Skip platforms", description: "Turns from these platforms never text. signal is skipped because that chat already shows the reply."}
+  reply_chars: {type: int, default: 300, label: "Reply preview length", description: "Characters of the final reply or prompt to include. Reply text is not secret-redacted; 0 sends no conversation text."}
+provides_hooks: [post_llm_call, on_session_end, on_human_input_request]
