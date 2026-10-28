@@ -1,0 +1,15 @@
+# Tooling config only. This project is a Hermes plugin, not a pip package: Hermes loads
+# plugin.yaml and __init__.py directly.
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM"]
+ignore = ["S310"]  # urlopen on the user's own SIGNAL_HTTP_URL is the plugin's job
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "S104"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

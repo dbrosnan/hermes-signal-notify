@@ -1,5 +1,10 @@
 # signal-notify for Hermes Agent
 
+[![CI](https://github.com/dbrosnan/hermes-signal-notify/actions/workflows/ci.yml/badge.svg)](https://github.com/dbrosnan/hermes-signal-notify/actions/workflows/ci.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/dbrosnan/hermes-signal-notify/badge)](https://scorecard.dev/viewer/?uri=github.com/dbrosnan/hermes-signal-notify)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Hermes](https://img.shields.io/badge/hermes-%3E%3D0.21.5-purple.svg)](https://github.com/NousResearch/hermes-agent)
+
 Get a Signal text when your [Hermes Agent](https://github.com/NousResearch/hermes-agent)
 needs you. Hermes texts you when:
 
@@ -25,12 +30,18 @@ question.
   - `SIGNAL_ACCOUNT`, the number signal-cli is registered to
   - `SIGNAL_HOME_CHANNEL`, the number to text. The `recipient` setting overrides it.
 
-## Install
+## Quick start
 
 ```bash
 hermes plugins install https://github.com/dbrosnan/hermes-signal-notify
 hermes plugins enable signal-notify
 ```
+
+Once the plugin is listed in the Hermes catalog, `hermes plugins install signal-notify`
+installs the reviewed, pinned release instead.
+
+To check it works, ask Hermes anything and let the turn finish. A `⏸ Hermes paused` text
+should arrive within a few seconds.
 
 A running gateway picks up the hooks when the plugin is enabled. CLI and TUI sessions pick
 them up the next time they start.
@@ -83,15 +94,44 @@ Three public Hermes hooks, with no core patching:
 - `on_human_input_request` fires right before Hermes blocks on a clarify, approval or sudo
   prompt.
 
-## Development
+## Troubleshooting
+
+| Symptom | Check |
+|---|---|
+| No texts at all | `hermes plugins list` shows `signal-notify` enabled. `~/.hermes/logs/agent.log` has `signal-notify` lines. |
+| Log says `SIGNAL_HTTP_URL, SIGNAL_ACCOUNT or recipient missing` | Set the variables in `~/.hermes/.env` and restart the session or gateway. |
+| Log says `send failed` | signal-cli isn't reachable: `curl -X POST $SIGNAL_HTTP_URL/api/v1/rpc -H 'content-type: application/json' -d '{"jsonrpc":"2.0","method":"version","id":1}'` |
+| Log says `signal-cli error: ... Unregistered user` | The recipient isn't a Signal user, or the number is missing the `+` country code. |
+| Texts from the CLI but not the TUI, or the other way round | Each process loads plugins when it starts. Restart the one that's missing texts. |
+| Two texts per event | An old copy of the plugin is still loaded. Restart the gateway with `hermes gateway restart`. |
+| Too many texts | Remove events from `notify_on`, or add platforms to `skip_platforms`. |
+
+## FAQ
+
+**Can I reply to Hermes from the text?** Not through this plugin, which only sends. Hermes'
+own Signal gateway handles two-way chat, and its turns are skipped here so you don't get
+each reply twice.
+
+**Does it work with Telegram, Slack or email?** No, it's Signal only. For Telegram, see
+[telegram-notify](https://github.com/madpower2000/hermes-telegram-notify).
+
+**Does it slow Hermes down?** No. Each send runs on its own thread with a 20 second
+timeout, and the agent never waits for it.
+
+## Contributing
+
+Bug reports, ideas and pull requests are welcome. Start with
+[CONTRIBUTING.md](CONTRIBUTING.md), and see [SECURITY.md](SECURITY.md) for private
+vulnerability reports. Everyone taking part follows the
+[Code of Conduct](CODE_OF_CONDUCT.md). Releases are described in
+[docs/RELEASING.md](docs/RELEASING.md), and changes are listed in
+[CHANGELOG.md](CHANGELOG.md).
 
 ```bash
 uvx --with pytest-cov pytest --cov=. tests
+uvx ruff check . && uvx ruff format --check .
 hermes plugins validate .
 ```
-
-Using Telegram instead? See
-[telegram-notify](https://github.com/madpower2000/hermes-telegram-notify).
 
 ## License
 

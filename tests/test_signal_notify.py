@@ -7,12 +7,16 @@ from pathlib import Path
 import pytest
 
 _SPEC = importlib.util.spec_from_file_location(
-    "signal_notify", Path(__file__).resolve().parent.parent / "__init__.py")
+    "signal_notify", Path(__file__).resolve().parent.parent / "__init__.py"
+)
 sn = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(sn)
 
-SECRETS = {"SIGNAL_HTTP_URL": "http://signal.test:8080", "SIGNAL_ACCOUNT": "+15550000001",
-           "SIGNAL_HOME_CHANNEL": "+15550000002"}
+SECRETS = {
+    "SIGNAL_HTTP_URL": "http://signal.test:8080",
+    "SIGNAL_ACCOUNT": "+15550000001",
+    "SIGNAL_HOME_CHANNEL": "+15550000002",
+}
 
 
 def make(config=None, secrets=SECRETS):
@@ -21,8 +25,10 @@ def make(config=None, secrets=SECRETS):
         get_config=lambda key, default: (config or {}).get(key, default),
         get_secret=lambda name: secrets.get(name, ""),
         sender=lambda url, account, recipient, message: sent.append(
-            {"url": url, "account": account, "recipient": recipient, "message": message}),
-        background=False)
+            {"url": url, "account": account, "recipient": recipient, "message": message}
+        ),
+        background=False,
+    )
     return notifier, sent
 
 
@@ -58,10 +64,15 @@ def test_interrupted_turn():
     assert sent[0]["message"].startswith("⏹ Hermes stopped")
 
 
-@pytest.mark.parametrize("kind,label", [("clarify", "❓ Hermes is asking"),
-                                        ("approval", "🔐 Hermes needs approval"),
-                                        ("sudo", "🔑 Hermes needs a sudo password"),
-                                        ("future_kind", "❓ Hermes is waiting (future_kind)")])
+@pytest.mark.parametrize(
+    "kind,label",
+    [
+        ("clarify", "❓ Hermes is asking"),
+        ("approval", "🔐 Hermes needs approval"),
+        ("sudo", "🔑 Hermes needs a sudo password"),
+        ("future_kind", "❓ Hermes is waiting (future_kind)"),
+    ],
+)
 def test_input_requests(kind, label):
     n, sent = make()
     n.on_human_input_request(kind=kind, prompt="Commit now?", session_id="s1", platform="tui")
@@ -78,8 +89,9 @@ def test_skipped_platforms(platform):
 
 def test_exit_copy_without_turn_id_is_ignored():
     n, sent = make()
-    n.on_session_end(session_id="s", completed=False, interrupted=True, platform="cli",
-                     reason="shutdown")
+    n.on_session_end(
+        session_id="s", completed=False, interrupted=True, platform="cli", reason="shutdown"
+    )
     assert sent == []
 
 
@@ -110,8 +122,9 @@ def test_identical_messages_within_window_are_deduped():
 
 
 def test_string_and_bad_config_values_are_coerced():
-    n, sent = make({"notify_on": "question, paused", "skip_platforms": "tui",
-                    "reply_chars": "not a number"})
+    n, sent = make(
+        {"notify_on": "question, paused", "skip_platforms": "tui", "reply_chars": "not a number"}
+    )
     n.on_human_input_request(kind="clarify", prompt="q", platform="tui")
     n.on_post_llm_call(session_id="sess-12345678", assistant_response="x" * 400, platform="cli")
     end(n)
@@ -183,7 +196,8 @@ class _Handler(BaseHTTPRequestHandler):
     received = []
 
     def do_POST(self):
-        self.received.append((self.path, json.loads(self.rfile.read(int(self.headers["content-length"])))))
+        length = int(self.headers["content-length"])
+        self.received.append((self.path, json.loads(self.rfile.read(length))))
         payload = json.dumps(self.reply).encode()
         self.send_response(200)
         self.send_header("content-type", "application/json")
@@ -208,8 +222,11 @@ def test_send_signal_posts_json_rpc(server):
     path, body = _Handler.received[0]
     assert path == "/api/v1/rpc"
     assert body["method"] == "send"
-    assert body["params"] == {"account": "+15550000001", "recipient": ["+15550000002"],
-                              "message": "hello"}
+    assert body["params"] == {
+        "account": "+15550000001",
+        "recipient": ["+15550000002"],
+        "message": "hello",
+    }
 
 
 def test_send_signal_swallows_rpc_errors_and_network_failures(server, caplog):

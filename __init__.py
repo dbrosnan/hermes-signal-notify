@@ -11,7 +11,8 @@ import threading
 import time
 import urllib.request
 from collections import OrderedDict
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 logger = logging.getLogger("signal_notify")
 
@@ -75,12 +76,17 @@ def turn_outcome(completed: bool, failed: bool, interrupted: bool) -> str:
 
 
 def send_signal(url: str, account: str, recipient: str, message: str) -> None:
-    body = json.dumps({
-        "jsonrpc": "2.0", "method": "send", "id": f"signal_notify_{int(time.time() * 1000)}",
-        "params": {"account": account, "recipient": [recipient], "message": message},
-    }).encode()
-    req = urllib.request.Request(f"{url.rstrip('/')}/api/v1/rpc", data=body,
-                                 headers={"content-type": "application/json"})
+    body = json.dumps(
+        {
+            "jsonrpc": "2.0",
+            "method": "send",
+            "id": f"signal_notify_{int(time.time() * 1000)}",
+            "params": {"account": account, "recipient": [recipient], "message": message},
+        }
+    ).encode()
+    req = urllib.request.Request(
+        f"{url.rstrip('/')}/api/v1/rpc", data=body, headers={"content-type": "application/json"}
+    )
     try:
         with urllib.request.urlopen(req, timeout=SEND_TIMEOUT_SECONDS) as resp:
             data = json.loads(resp.read() or b"{}")
@@ -94,17 +100,20 @@ def send_signal(url: str, account: str, recipient: str, message: str) -> None:
 
 
 class Notifier:
-    def __init__(self, get_config: Callable[[str, Any], Any],
-                 get_secret: Callable[[str], str] = _get_secret,
-                 sender: Callable[[str, str, str, str], None] = send_signal,
-                 background: bool = True):
+    def __init__(
+        self,
+        get_config: Callable[[str, Any], Any],
+        get_secret: Callable[[str], str] = _get_secret,
+        sender: Callable[[str, str, str, str], None] = send_signal,
+        background: bool = True,
+    ):
         self._get_config = get_config
         self._get_secret = get_secret
         self._sender = sender
         self._background = background
-        self._last_reply: "OrderedDict[str, str]" = OrderedDict()
-        self._reported_turns: "OrderedDict[str, bool]" = OrderedDict()
-        self._recent: "OrderedDict[str, float]" = OrderedDict()
+        self._last_reply: OrderedDict[str, str] = OrderedDict()
+        self._reported_turns: OrderedDict[str, bool] = OrderedDict()
+        self._recent: OrderedDict[str, float] = OrderedDict()
         self._lock = threading.Lock()
 
     def _setting(self, key: str) -> Any:
@@ -139,20 +148,33 @@ class Notifier:
         if not self._background:
             self._sender(url, account, recipient, message)
             return
-        threading.Thread(target=self._sender, args=(url, account, recipient, message),
-                         name="signal-notify", daemon=True).start()
+        threading.Thread(
+            target=self._sender,
+            args=(url, account, recipient, message),
+            name="signal-notify",
+            daemon=True,
+        ).start()
 
-    def on_post_llm_call(self, session_id: str = "", assistant_response: str = "",
-                         platform: str = "", **_: Any) -> None:
+    def on_post_llm_call(
+        self, session_id: str = "", assistant_response: str = "", platform: str = "", **_: Any
+    ) -> None:
         if not (session_id and assistant_response) or not self._wants("paused", platform):
             return
         preview = clip(assistant_response, self._setting("reply_chars"))
         with self._lock:
             _remember(self._last_reply, session_id, preview)
 
-    def on_session_end(self, session_id: str = "", completed: bool = False, failed: bool = False,
-                       interrupted: bool = False, turn_exit_reason: str = "", platform: str = "",
-                       turn_id: Optional[str] = None, **extra: Any) -> None:
+    def on_session_end(
+        self,
+        session_id: str = "",
+        completed: bool = False,
+        failed: bool = False,
+        interrupted: bool = False,
+        turn_exit_reason: str = "",
+        platform: str = "",
+        turn_id: str | None = None,
+        **extra: Any,
+    ) -> None:
         # CLI exit paths fire a second copy that carries `reason`. Report it only for a turn
         # the turn finalizer has not already reported.
         exit_copy = "reason" in extra
@@ -174,8 +196,9 @@ class Notifier:
             message = f"⏸ Hermes paused {where}" + (f"\n{reply}" if reply else "")
         self._deliver(message)
 
-    def on_human_input_request(self, kind: str = "", prompt: str = "", session_id: str = "",
-                               platform: str = "", **_: Any) -> None:
+    def on_human_input_request(
+        self, kind: str = "", prompt: str = "", session_id: str = "", platform: str = "", **_: Any
+    ) -> None:
         if not self._wants("question", platform):
             return
         label = INPUT_LABELS.get(kind, f"❓ Hermes is waiting ({kind or 'input'})")

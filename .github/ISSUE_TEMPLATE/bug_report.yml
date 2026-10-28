@@ -1,0 +1,56 @@
+name: Bug report
+description: Something signal-notify does wrong, or a text that didn't arrive.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. **Remove phone numbers, UUIDs and private addresses** before
+        posting. Security problems go to
+        [private reporting](https://github.com/dbrosnan/hermes-signal-notify/security/advisories/new) instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Start a Hermes session in the TUI
+        2. Let a turn finish
+        3. No text arrives
+    validations:
+      required: true
+  - type: input
+    id: plugin
+    attributes:
+      label: signal-notify version
+      placeholder: "1.0.0"
+    validations:
+      required: true
+  - type: input
+    id: hermes
+    attributes:
+      label: Hermes version
+      description: Output of `hermes --version`.
+    validations:
+      required: true
+  - type: input
+    id: signalcli
+    attributes:
+      label: signal-cli version
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where the session ran
+      options: [CLI, TUI, Desktop, Gateway platform, Other]
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: The `signal-notify` lines from `~/.hermes/logs/agent.log`, with numbers removed.
+      render: text
