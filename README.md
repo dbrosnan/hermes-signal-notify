@@ -4,6 +4,7 @@
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/dbrosnan/hermes-signal-notify/badge)](https://scorecard.dev/viewer/?uri=github.com/dbrosnan/hermes-signal-notify)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Hermes](https://img.shields.io/badge/hermes-%3E%3D0.21.5-purple.svg)](https://github.com/NousResearch/hermes-agent)
+[![Hermes catalog](https://img.shields.io/badge/hermes%20catalog-listed-green.svg)](https://hermes-agent.nousresearch.com/docs/plugins/signal-notify)
 
 Get a Signal text when your [Hermes Agent](https://github.com/NousResearch/hermes-agent)
 needs you. Hermes texts you when:
@@ -32,13 +33,23 @@ question.
 
 ## Quick start
 
+signal-notify is listed in the
+[Hermes plugin catalog](https://hermes-agent.nousresearch.com/docs/plugins/signal-notify), so
+Hermes installs the reviewed, pinned release:
+
 ```bash
-hermes plugins install https://github.com/dbrosnan/hermes-signal-notify
+hermes plugins install signal-notify
 hermes plugins enable signal-notify
 ```
 
-Once the plugin is listed in the Hermes catalog, `hermes plugins install signal-notify`
-installs the reviewed, pinned release instead.
+Later releases reach you with `hermes plugins update signal-notify` once the catalog pin is
+bumped.
+
+To run the latest unreleased code from `main` instead, which Hermes marks as unreviewed:
+
+```bash
+hermes plugins install https://github.com/dbrosnan/hermes-signal-notify
+```
 
 To check it works, ask Hermes anything and let the turn finish. A `⏸ Hermes paused` text
 should arrive within a few seconds.

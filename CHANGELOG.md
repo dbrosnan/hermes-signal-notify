@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- README: install from the Hermes plugin catalog by name; the GitHub URL is now the
+  option for unreleased code.
+
 ## [1.0.0] - 2026-10-28
 
 ### Added
