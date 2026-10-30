@@ -21,10 +21,22 @@ DEDUPE_WINDOW_SECONDS = 60
 MAX_TRACKED = 64
 DEFAULTS: dict[str, Any] = {
     "recipient": "",
-    "notify_on": ["paused", "failed", "interrupted", "question"],
     "skip_platforms": ["signal", "cron", "subagent"],
+    "include_text": True,
     "reply_chars": 300,
 }
+# event -> on/off setting shown as a toggle in the Plugins hub. Before 1.1.0 events were picked
+# with a `notify_on` list, which still applies to any toggle the user has not set.
+EVENT_TOGGLES = {
+    "paused": "notify_paused",
+    "failed": "notify_failed",
+    "interrupted": "notify_interrupted",
+    "question": "notify_questions",
+    "approval": "notify_approvals",
+}
+LEGACY_EVENTS = {"approval": "question"}
+FALSE_WORDS = {"", "0", "false", "off", "no"}
+_UNSET = object()
 INPUT_LABELS = {
     "clarify": "❓ Hermes is asking",
     "approval": "🔐 Hermes needs approval",
@@ -53,6 +65,12 @@ def as_list(value: Any, default: list) -> list:
     if isinstance(value, (list, tuple, set)):
         return [str(part).strip() for part in value]
     return list(default)
+
+
+def as_bool(value: Any, default: bool) -> bool:
+    if isinstance(value, str):
+        return value.strip().lower() not in FALSE_WORDS
+    return default if value is None else bool(value)
 
 
 def as_int(value: Any, default: int) -> int:
@@ -118,16 +136,26 @@ class Notifier:
 
     def _setting(self, key: str) -> Any:
         value = self._get_config(key, DEFAULTS[key])
-        if key in ("notify_on", "skip_platforms"):
+        if key == "skip_platforms":
             return as_list(value, DEFAULTS[key])
+        if key == "include_text":
+            return as_bool(value, DEFAULTS[key])
         if key == "reply_chars":
-            return as_int(value, DEFAULTS[key])
+            return as_int(value, DEFAULTS[key]) if self._setting("include_text") else 0
         return DEFAULTS[key] if value is None else str(value).strip()
+
+    def _event_on(self, event: str) -> bool:
+        toggle = self._get_config(EVENT_TOGGLES[event], _UNSET)
+        if toggle is not _UNSET:
+            return as_bool(toggle, True)
+        legacy = self._get_config("notify_on", None)
+        if legacy is None:
+            return True
+        return LEGACY_EVENTS.get(event, event) in {e.lower() for e in as_list(legacy, [])}
 
     def _wants(self, event: str, platform: str) -> bool:
         skip = {p.lower() for p in self._setting("skip_platforms")}
-        notify_on = {e.lower() for e in self._setting("notify_on")}
-        return event in notify_on and (platform or "").lower() not in skip
+        return (platform or "").lower() not in skip and self._event_on(event)
 
     def _is_duplicate(self, message: str) -> bool:
         now = time.monotonic()
@@ -199,7 +227,8 @@ class Notifier:
     def on_human_input_request(
         self, kind: str = "", prompt: str = "", session_id: str = "", platform: str = "", **_: Any
     ) -> None:
-        if not self._wants("question", platform):
+        event = "approval" if kind in ("approval", "sudo") else "question"
+        if not self._wants(event, platform):
             return
         label = INPUT_LABELS.get(kind, f"❓ Hermes is waiting ({kind or 'input'})")
         where = f"[{platform or 'hermes'} …{(session_id or '?')[-8:]}]"

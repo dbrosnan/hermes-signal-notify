@@ -37,4 +37,4 @@ What to expect:
 - The security of signal-cli, the Signal service, or the network between Hermes and
   signal-cli. Use a loopback, private network or HTTPS address, as the README explains.
 - Reply text in notifications. Sending up to `reply_chars` of it is documented behaviour.
-  Set `reply_chars: 0` to turn it off.
+  Turn off `include_text` (or set `reply_chars: 0`) to stop it.

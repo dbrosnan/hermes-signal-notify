@@ -10,6 +10,8 @@ ignore = ["S310"]  # urlopen on the user's own SIGNAL_HTTP_URL is the plugin's j
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101", "S104"]
+# Offline art script: seeded randomness, fixed local commands, long SVG/CSS literals.
+"docs/art/*" = ["S311", "S603", "S607", "E501"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

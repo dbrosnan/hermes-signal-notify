@@ -149,6 +149,65 @@ def test_notify_on_filters_events_and_recipient_override():
     assert [s["recipient"] for s in sent] == ["+15559999999"]
 
 
+def ask_all(n):
+    for kind in ("clarify", "approval", "sudo"):
+        n.on_human_input_request(kind=kind, prompt="p", session_id="s", platform="cli")
+
+
+@pytest.mark.parametrize(
+    "toggle,kw",
+    [
+        ("notify_paused", {}),
+        ("notify_failed", {"completed": False, "failed": True}),
+        ("notify_interrupted", {"completed": False, "interrupted": True}),
+    ],
+)
+def test_turn_toggles_switch_off_their_event(toggle, kw):
+    n, sent = make({toggle: False})
+    end(n, **kw)
+    assert sent == []
+
+
+def test_question_and_approval_toggles_are_independent():
+    n, sent = make({"notify_questions": False})
+    ask_all(n)
+    assert [s["message"].split()[0] for s in sent] == ["🔐", "🔑"]
+    n, sent = make({"notify_approvals": False})
+    ask_all(n)
+    assert [s["message"].split()[0] for s in sent] == ["❓"]
+
+
+@pytest.mark.parametrize("value", ["false", "off", "0", "no", 0])
+def test_string_toggle_values_are_coerced(value):
+    n, sent = make({"notify_paused": value})
+    end(n)
+    assert sent == []
+
+
+def test_include_text_off_sends_headers_only():
+    n, sent = make({"include_text": False})
+    n.on_post_llm_call(session_id="sess-12345678", assistant_response="secret plan")
+    end(n)
+    n.on_human_input_request(
+        kind="approval", prompt="rm -rf build", session_id="s1", platform="cli"
+    )
+    assert [s["message"] for s in sent] == [
+        "⏸ Hermes paused [cli …12345678]",
+        "🔐 Hermes needs approval [cli …s1]",
+    ]
+
+
+def test_legacy_notify_on_applies_until_a_toggle_is_set():
+    n, sent = make({"notify_on": ["question"]})
+    end(n)
+    ask_all(n)
+    assert len(sent) == 3
+    n, sent = make({"notify_on": ["question"], "notify_paused": True, "notify_approvals": False})
+    end(n)
+    ask_all(n)
+    assert [s["message"].split()[0] for s in sent] == ["⏸", "❓"]
+
+
 def test_reply_chars_zero_sends_no_conversation_text():
     n, sent = make({"reply_chars": 0})
     n.on_post_llm_call(session_id="sess-12345678", assistant_response="secret plan")
